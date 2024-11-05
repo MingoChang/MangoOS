@@ -1,25 +1,33 @@
-TARGETS = boot.bin loader
+TARGETS = boot.bin loader kernel.elf
 OBJECTS = boot/boot.o boot/loader.o
+KERNEL_OBJS = kernel/start.o kernel/init.o
 ELFS = boot.elf loader.elf
-SOURCE_FILES = boot/boot.S boot/loader.S
 BOOT_SRC = boot
+KERNEL_SRC = kernel
 DISK_NAME = ../image/system.img
 MOUNT_DIR = ../image/system
 
 CC = gcc
 LD = ld
-CFLAGS = -g -c -O0 -m32 -nostartfiles -no-pie -fno-stack-protector -nostdlib -nostdinc
-LDFLAGS = -m elf_i386
+CFLAGS  =-O0 -g3 -gdwarf-2 -m32 -c -fstrength-reduce -fomit-frame-pointer -fno-stack-protector -fno-builtin
+LDFLAGS = -m elf_i386 -z noexecstack
 
 all:$(TARGETS)
 
 $(BOOT_SRC)/%.o: $(BOOT_SRC)/%.S
 	$(CC) $(CFLAGS) -o $@ $<
 
+$(KERNEL_SRC)/%.o: $(KERNEL_SRC)/%.S
+	$(CC) $(CFLAGS) -o $@ $<
+$(KERNEL_SRC)/%.o: $(KERNEL_SRC)/%.c
+	$(CC) $(CFLAGS) -o $@ $<
+	
 boot.elf: boot/boot.o
 	$(LD) $(LDFLAGS) -Ttext 0x7c00 -o $@ $<
 loader.elf: boot/loader.o
 	$(LD) $(LDFLAGS) -Ttext 0x8000 -o $@ $<
+kernel.elf: $(KERNEL_OBJS)
+	$(LD) $(LDFLAGS) -o $@ $(KERNEL_OBJS)
 
 boot.bin: boot.elf
 	objcopy -O binary $< $@
@@ -32,8 +40,9 @@ install: $(TARGETS)
 	@sync
 	@sudo mount -t ext2 $(DISK_NAME) $(MOUNT_DIR)
 	@sudo cp loader $(MOUNT_DIR)/boot/
+	@sudo cp kernel.elf $(MOUNT_DIR)/boot/kernel
 	@sync
 	@sudo umount $(MOUNT_DIR)
 
 clean:
-	rm -rf $(OBJECTS) $(TARGETS) $(ELFS)
+	rm -rf $(OBJECTS) $(KERNEL_OBJS) $(TARGETS) $(ELFS)

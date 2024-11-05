@@ -14,9 +14,10 @@ sleep 0.5
 gdb $location/../source/boot.elf \
     -ex "set confirm off" \
     -ex "add-symbol-file $location/../source/loader.elf 0x8000" \
+    -ex "add-symbol-file $location/../source/kernel.elf 0x20000" \
     -ex "target remote :1234" \
     -ex "b _start" \
-    -ex "c"
+    -ex "continue"
 
 # 关闭QEMU
 PID=$(pgrep -f "qemu-system-i386")
