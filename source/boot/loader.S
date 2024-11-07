@@ -65,6 +65,8 @@ get_memory_loop:
 
     jc done                  # 如果出错，则跳转到 done
 	incw mem_sum			 # 没有出错，就增加内存块计数
+	mov %es:8(%di), %eax	 # 取该段内存大小
+	add %eax, mem_size		 # 增加内存大小，目前只考虑32位能表示的内存大小
     cmp $0, %ebx             # 检查是否有更多的内存区域
     je done                  # 如果 EAX 返回 0，跳转到 done
 
@@ -110,14 +112,112 @@ protected_mode_entry:
     lea pro_mode, %esi   	# 显示32位模式下的消息
     call puts32
 
-	call display_mem		# 显示内存布局信息
-
 	call load_kernel		# 加载内核到内存中
+	call display_mem		# 显示内存布局信息
+	call setup_page			# 启用分页
+	call place_kernel		# 按elf格式放置内核在内存中
 
-	mov $0x20000, %eax
-	call *%eax				# 跳转到内核代码中运行
+    jmp $SelectorCode, $KernelEntryPoint # 远跳转到内核代码
 
     jmp .
+
+### 分页
+setup_page:
+	pusha
+
+	xor %edx, %edx		# 只考虑32位表示的内存大小
+	mov mem_size, %eax	# 内存大小
+	mov $0x400000, %ebx # 4M = 也表对应的内存大小
+	div %ebx
+	mov %eax, %ecx		# 存储内存需要多少个页表
+	test %edx, %edx
+	jz 1f
+	inc %ecx			# 有余数，则增加一个页表
+
+1:
+	push %ecx			# 暂存页表数
+
+	mov $PageDirBase, %edi
+	xor %eax, %eax
+	mov $PageTableBase + 7, %eax	# 0x07,表示该页存在,可读写
+
+dir_loop:
+	stosl				# 将eax的内容放置到edi指向的内存，然后edi增加4
+	add $4096, %eax		# 下一页表项
+	loop dir_loop
+
+	pop %eax
+	mov $1024, %ebx
+	mul %ebx			# 页表个数 * 1024 = 总共要映射的内存页
+	mov %eax, %ecx
+	mov $PageTableBase, %edi
+	xor %eax, %eax
+	mov $7, %eax		# 0x07，表示该页对应的内存存在可读写
+	
+table_loop:
+	stosl				# 初始化各页表内容
+	add $4096, %eax		# 下一内存块
+	loop table_loop
+
+	mov $PageDirBase, %eax
+	mov %eax, %cr3		# 开启分页机制
+	mov %cr0, %eax
+	or $0x80000000, %eax
+	mov %eax, %cr0
+
+	popa
+	ret
+
+### 按ELF格式放置内核到内存中
+place_kernel:
+	pusha
+	mov $0x20000, %edi	# 目前内核存放的地址
+	xor %esi, %esi
+
+	mov 0x2c(%edi), %cx		# Program header table中有多少条记录
+	movzx %cx, %ecx			# 高位补0
+	mov 0x1c(%edi), %esi	# Pragram header table在文件中的偏移
+	add %edi, %esi			# Pragram header table在现在内存中的位置 
+
+place_loop:
+	mov 0x10(%esi), %eax	# 段长度
+	cmp $0, %eax
+	je 1f
+
+	push %eax				# memcpy的参数--拷贝长度
+	mov 0x04(%esi), %eax	# 段起始位置
+	add %edi, %eax			# 段起始位置在内存中的位置
+	push %eax				# memcpy的参数--源地址
+	mov 0x08(%esi), %eax
+	push %eax				# memcpy的擦数--目的地址
+
+	call memcpy
+	add $12, %esp			# 栈平衡
+1:
+	add $0x20, %esi			# 下一个Pragram header项
+	loop place_loop
+
+	popa
+	ret
+
+### 内存拷贝
+memcpy:
+	mov %esp, %ebp			# 获取栈顶地址
+	pusha
+
+	mov 4(%ebp), %edi		# 目的地址
+	mov 8(%ebp), %esi		# 源地址
+	mov 12(%ebp), %ecx		# 长度
+
+memcpy_loop:
+	mov (%esi), %al
+	mov %al, (%edi)
+	inc %esi
+	inc %edi
+	loop memcpy_loop
+
+	popa
+	ret
 
 ### 使用显存方式打印数据到屏幕
 puts32:
@@ -475,6 +575,12 @@ gdt_descriptor:
 .equ SelectorData, 0x10   # 数据段选择子，GDT表中数据段的偏移量
 .equ SelectorVideo, 0x18  # 显存段选择子，GDT表中数据段的偏移量
 
+### 定义也目录和也表地址
+.equ PageDirBase, 0x200000		# 页目录位于地址2M处，假设内核大小不超过1.9M
+.equ PageTableBase, 0x201000	# 也表位于4K处
+
+.equ KernelEntryPoint, 0x30400	# 内核入口点位置
+
     position:	.word 160	# 从第二行开始显示
     loader:		.string "Begin loader"
     pro_mode:   .string "In Protected mode"
@@ -485,3 +591,4 @@ gdt_descriptor:
 	dir_name:	.asciz "boot"
 	file_name:	.asciz "kernel"
 	mem_sum:	.word 0		# 内存分块数
+	mem_size:	.long 0		# 内存大小

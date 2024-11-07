@@ -27,7 +27,7 @@ boot.elf: boot/boot.o
 loader.elf: boot/loader.o
 	$(LD) $(LDFLAGS) -Ttext 0x8000 -o $@ $<
 kernel.elf: $(KERNEL_OBJS)
-	$(LD) $(LDFLAGS) -o $@ $(KERNEL_OBJS)
+	$(LD) $(LDFLAGS) -Ttext 0x30400 -o $@ $(KERNEL_OBJS)
 
 boot.bin: boot.elf
 	objcopy -O binary $< $@

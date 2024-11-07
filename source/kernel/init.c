@@ -6,11 +6,11 @@
  */
 #include "init.h"
 
-extern int add();
-void kernel_init(void)
+int kernel_init(void)
 {
     int i = 0;
-    i++;
+    while(1) {
+    }
 
-    add();
+    return 0;
 }

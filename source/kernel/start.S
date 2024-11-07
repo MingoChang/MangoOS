@@ -4,17 +4,7 @@
 ### ********************
 .section .text
 	.global _start
-	.global add
 	.extern kernel_init
 _start:
-	call kernel_init # 初始化内核
-	
+	call kernel_init
 	jmp .
-
-add:
-	pusha
-
-	jmp .
-
-	popa
-	ret
