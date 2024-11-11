@@ -1,6 +1,6 @@
 TARGETS = boot.bin loader kernel.elf
 OBJECTS = boot/boot.o boot/loader.o
-KERNEL_OBJS = kernel/start.o kernel/init.o
+KERNEL_OBJS = kernel/start.o kernel/init.o kernel/arch.o kernel/irq.o
 ELFS = boot.elf loader.elf
 BOOT_SRC = boot
 KERNEL_SRC = kernel
