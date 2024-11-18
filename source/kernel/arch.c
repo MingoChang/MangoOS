@@ -55,6 +55,32 @@ static void init_gdt()
     reload_segments();
 }
 
+static void init_8259()
+{
+    /* 边沿触发，级联方式 */
+    outb(0x20, (1 << 4) | 1);
+    /* 起始中断序号0x20 */
+    outb(0x21, 0x20);
+    /* 有从片 */
+    outb(0x21, 1 << 2);
+    /* 不使用缓冲，不自动结束， 8086模式 */
+    outb(0x21, 1);
+    
+    /* 初始化从片 */
+    /* 边沿触发，级联方式 */
+    outb(0xa0, (1 << 4) | 1);
+    /* 起始中断号 */
+    outb(0xa1, 0x28);
+    /* 无从片，连接主片 */
+    outb(0xa1, 1 << 1);
+    /* 不使用缓冲，不自动结束， 8086模式 */
+    outb(0xa1, 1);
+
+    /* 只允许来自从片的中断 */
+    outb(0x21, 0xff & ~(1 << 2));
+    outb(0xa1, 0xff);
+}
+
 static void init_idt()
 {
     /* 全部初始化为默认处理函数 */
@@ -85,6 +111,9 @@ static void init_idt()
     irq_install(21, (irq_handler_t)exception_handler_control);
 
     load_idt((uint)idt_table, sizeof(idt_table));
+
+    /* 初始化8259芯片 */
+    init_8259();
 }
 
 /* cpu等硬件初始化 */

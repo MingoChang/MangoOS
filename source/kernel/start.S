@@ -63,3 +63,5 @@ exception_handler mc 18 0
 exception_handler simd 19 0
 exception_handler virtual 20 0
 exception_handler control 21 1
+
+exception_handler time 20 0

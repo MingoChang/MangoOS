@@ -18,8 +18,12 @@ typedef struct _exception_frame_t
 
 typedef void (*irq_handler_t)();
 
+
 void irq_init();
 int irq_install(int irq_num, irq_handler_t handler);
+void enable_8259(int num);
+void disable_8259(int num);
+void pic_done(int num);
 
 void exception_handler_default();
 void exception_handler_divide();

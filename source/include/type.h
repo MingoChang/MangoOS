@@ -16,4 +16,6 @@ typedef unsigned int uint;
 #define KERNEL_SELECTOR_CS  1 << 3  /* 内核代码段选择子 */
 #define KERNEL_SELECTOR_DS  2 << 3  /* 内核数据段选择子 */
 
+#define NULL (void*)0
+
 #endif

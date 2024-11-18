@@ -9,7 +9,7 @@
 
 static void do_default_handler(exception_frame_t* frame, char *messsage)
 {
-    __asm__ __volatile("hlt");
+    __asm__ __volatile__("hlt");
 }
 
 void do_handler_default(exception_frame_t* frame)
@@ -99,11 +99,72 @@ void do_handler_control(exception_frame_t* frame)
 
 int irq_install(int irq_num, irq_handler_t handler)
 {
-    if (irq_num > 128) {
+    if (irq_num > IDT_TABLE_SIZE) {
         return -1;
     }
     
     set_gate_desc(irq_num, KERNEL_SELECTOR_CS, (uint)handler, (1 << 15) | (0 << 13) | (0xE << 8));
 
     return 0;
+}
+
+/* 开启8259芯片指定的中断 */
+void enable_8259(int num)
+{
+    /* 非8259主从芯片控制的中断 */
+    if (num < 0x20 || num > 0x30) {
+        return;
+    }
+
+    /* 从8259芯片控制的中断开始计数 */
+    num -= 0x20;
+
+    /* 主片 */
+    if (num < 8) {
+        uint mask = inb(0x21) & (~(1 << num));
+        outb(0x21, mask);
+    }
+    /* 从片 */
+    else {
+        num -= 8;
+        uint mask = inb(0xa1) & (~(1 << num));
+        outb(0xa1, mask);
+    }
+}
+
+/* 关闭8259芯片指定的中断 */
+void disable_8259(int num)
+{
+    /* 非8259主从芯片控制的中断 */
+    if (num < 0x20 || num > 0x30) {
+        return;
+    }
+
+    /* 从8259芯片控制的中断开始计数 */
+    num -= 0x20;
+
+    /* 主片 */
+    if (num < 8) {
+        uint mask = inb(0x21) | (1 << num);
+        outb(0x21, mask);
+    }
+    /* 从片 */
+    else {
+        num -= 8;
+        uint mask = inb(0xa1) | (1 << num);
+        outb(0xa1, mask);
+    }
+}
+
+/* 重新使能中断 */
+void pic_done(int num)
+{
+    num -= 0x20;
+
+    /* 从片发送处理完成命令 */
+    if (num >= 8) {
+        outb(0xa0, 1 << 5);
+    }
+
+    outb(0x20, 1 << 5);
 }
