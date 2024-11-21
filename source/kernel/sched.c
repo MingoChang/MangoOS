@@ -6,34 +6,40 @@
  */
 #include "../include/sched.h"
 #include "../include/task.h"
+#include "../include/queue.h"
 
 extern task_t idle_task, init_task;
 extern task_t* current;
+extern queue_t ready_task_queue;
 
-/* 目前就2个进程，选择另一个 */
 static task_t* pick_next_task()
 {
-    if (current == &idle_task) {
-        return &init_task;
-    } else {
-        return &idle_task;
+    queue_t *next = current->rq.next;
+
+    /* 当前任务已经不在运行队列，next是取不到下一个可运行进程的 */
+    if (current->state != TASK_RUNNING) {
+        next = queue_first(&ready_task_queue);
     }
+
+    /* 队列头并不存储内容 */
+    if (next == &ready_task_queue) {
+        next = next->next;
+    }
+
+    /* 运行队列已经没有进程，执行空闲进程 */
+    if (next == &ready_task_queue) {
+        next = &idle_task.rq;
+    }
+
+    return queue_data(next, task_t, rq);
 }
 
 void schedule()
 {
     task_t *next;
 
-    /* 当前进程的时间片用完 */
-    if (current->slice == 0) {
-        next = pick_next_task();
-        /* 选好下个进程后，当前进程的时间片给恢复 */
-        current->slice = 3;
-        switch_to(current, next);
-    } else {
-        /* 时间片还有，继续执行 */
-        current->slice--;
-    }
+    next = pick_next_task();
+    switch_to(current, next);
 }
 
 void switch_to(task_t *prev, task_t *next) 
@@ -53,8 +59,8 @@ void switch_to(task_t *prev, task_t *next)
  * 完成了进程切换，此时的next是下一个进程环境中的变
  * 量。还有一种方式是类似Linux的实现，直接把进程结构
  * 体放置在内核栈的开始位置，每个进程都有自己的内核
- * 栈，这样让current指向内核栈的其实位置，那么永远
- * 都是执行当前进程的结构体，从而正确引用当前进程 */
+ * 栈，这样让current指向内核栈的其实位置，那么永远都
+ * 是执行当前进程的结构体，从而正确引用当前进程 */
 void __switch_to(task_t *prev, task_t *next)
 {
     __asm__ __volatile__( 

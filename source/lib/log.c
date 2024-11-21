@@ -6,11 +6,15 @@
  */
 #include <stdarg.h>
 #include "../include/log.h"
+#include "../include/irq.h"
+#include "../include/ipc.h"
 
 static volatile ushort* vga;
+static mutex_t mutex;
 
 void log_init()
 {
+    mutex_init(&mutex);
     /* 0x5a0为进入内核后屏幕字符的位置 */
     vga = (ushort*)(0xB8000 + 0x5a0);
 }
@@ -53,6 +57,7 @@ void kprintf(const char *format, ...)
     va_list args;
     va_start(args, format);
 
+    mutex_lock(&mutex);
     while (*format != '\0') {
         /* 处理格式化内容，目前仅支持数字，16进制，字符串 */
         if (*format == '%') {
@@ -96,12 +101,15 @@ void kprintf(const char *format, ...)
 
         /* 输出满一页屏幕了，清空屏幕从头开始显示 */
         if (((int)vga - 0xB8000) >= (160 * 25)) {
+            format--; /* 清屏后重新显示当前字符 */
             vga = (ushort*)0xB8000;
-            for (int i=0; i< 80 * 25; i++) {
+            for (int i=0; i<80 * 25; i++) {
                 vga[i] = ' ';
             }
         }
     }
+
+    mutex_unlock(&mutex);
 
     va_end(args);
 }

@@ -89,6 +89,29 @@ static inline void load_idt(uint base, ushort limit)
     __asm__ __volatile__("lidt %0" :: "m"(idtr));
 }
 
+static inline uint read_eflags()
+{
+    uint eflags;
+    __asm__ __volatile__(
+        "pushfl\n\t"
+        "pop %0\n\t"
+        :"=r"(eflags)
+        ::"memory"
+        );
+
+    return eflags;
+}
+
+static inline void write_eflags(uint eflags)
+{
+    __asm__ __volatile__(
+        "push %0\n\t"
+        "popf\n\t"
+        ::"r"(eflags)
+        :"memory"
+        );
+}
+
 static inline void reload_segments() 
 {
     // 重新加载数据段寄存器

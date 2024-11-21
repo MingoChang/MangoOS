@@ -7,7 +7,7 @@
 #include "../include/time.h"
 #include "../include/arch.h"
 #include "../include/irq.h"
-#include "../include/sched.h"
+#include "../include/task.h"
 
 /* 系统滴答 */
 static uint sys_tick;
@@ -38,6 +38,6 @@ void do_handler_time(exception_frame_t* frame)
 {
     sys_tick++;
     pic_done(0x20);
-    schedule();
+    task_tick();
 }
 

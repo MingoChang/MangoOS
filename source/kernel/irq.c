@@ -168,3 +168,18 @@ void pic_done(int num)
 
     outb(0x20, 1 << 5);
 }
+
+/* 进入临界区 */
+uint enter_critical()
+{
+    /* 保存原先的中断开关状态 */
+    uint eflags = read_eflags();
+    cli();
+    return eflags;
+}
+
+/* 离开临界区 */
+void leave_critical(uint eflags)
+{
+    write_eflags(eflags);
+}

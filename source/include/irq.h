@@ -24,6 +24,8 @@ int irq_install(int irq_num, irq_handler_t handler);
 void enable_8259(int num);
 void disable_8259(int num);
 void pic_done(int num);
+uint enter_critical();
+void leave_critical(uint eflags);
 
 void exception_handler_default();
 void exception_handler_divide();
