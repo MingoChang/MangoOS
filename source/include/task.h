@@ -25,6 +25,7 @@ typedef struct _task_t
 
     int pid;
     int slice;  /* 时间片 */
+    uint cr3;   /* 进程页目录起始地址 */
     uint sleep_ticks; /* 睡眠时间 */
     uint eip;   /* 初始任务入口 */
     uint esp;   /* 初始栈顶指针 */

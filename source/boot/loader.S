@@ -68,7 +68,7 @@ get_memory_loop:
 	mov %es:8(%di), %eax	 # 取该段内存大小
 	add %eax, mem_size		 # 增加内存大小，目前只考虑32位能表示的内存大小
     cmp $0, %ebx             # 检查是否有更多的内存区域
-    je done                  # 如果 EAX 返回 0，跳转到 done
+    je done                  # 如果 EBX 返回 0，跳转到 done
 
     add $20, %di             # 每个内存块描述符占 20 字节，移动 DI 指针
     jmp get_memory_loop      # 获取下一块内存区域
@@ -129,20 +129,20 @@ setup_page:
 	mov mem_size, %eax	# 内存大小
 	mov $0x400000, %ebx # 4M = 也表对应的内存大小
 	div %ebx
-	mov %eax, %ecx		# 存储内存需要多少个页表
+	mov %eax, %ecx		# 存储内存需要多少个页目录
 	test %edx, %edx
 	jz 1f
-	inc %ecx			# 有余数，则增加一个页表
+	inc %ecx			# 有余数，则增加一个页目录
 
 1:
-	push %ecx			# 暂存页表数
+	push %ecx			# 暂存页目录数
 
 	mov $PageDirBase, %edi
 	xor %eax, %eax
 	mov $PageTableBase + 7, %eax	# 0x07,表示该页存在,可读写
 
 dir_loop:
-	stosl				# 将eax的内容放置到edi指向的内存，然后edi增加4
+	stosl				# 将eax的内容放置到edi指向的内存，然后edi增加4k
 	add $4096, %eax		# 下一页表项
 	loop dir_loop
 

@@ -11,6 +11,7 @@
 #include "../include/task.h"
 #include "../include/sched.h"
 #include "../include/queue.h"
+#include "../include/memory.h"
 
 queue_t task_queue;
 queue_t ready_task_queue;
@@ -33,6 +34,7 @@ void kernel_init(void)
     arch_init();
     time_init();
     log_init();
+    mem_init();
 
     /* 初始化进程队列和可运行队列 */
     queue_init(&task_queue);
@@ -48,7 +50,6 @@ void kernel_init(void)
     /* 开中断 */
     sti();
 
-    int count = 0;
     /* 作为空闲进程 */
     while(1) {
         __asm__ __volatile__("hlt");

@@ -9,6 +9,7 @@
 #include "../include/sched.h"
 #include "../include/queue.h"
 #include "../include/irq.h"
+#include "../include/page.h"
 
 static int pid = 0;
 extern queue_t task_queue;
@@ -40,6 +41,7 @@ int task_init(task_t* task, uint entry)
         *(--pesp) = (uint)task;
     }
     task->esp = (uint)pesp;
+    task->cr3 = create_pde();
     task->state = TASK_RUNNING;
 
     queue_insert_tail(&task_queue, &task->q);

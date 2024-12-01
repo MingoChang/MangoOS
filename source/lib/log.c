@@ -19,7 +19,7 @@ void log_init()
     vga = (ushort*)(0xB8000 + 0x5a0);
 }
 
-static void print_integer(int value, int base) {
+static void print_integer(uint value, int base) {
     char buffer[32];
     int i = 31;
 
@@ -64,12 +64,12 @@ void kprintf(const char *format, ...)
             format++;
             switch (*format) {
                 case 'd': {
-                    int value = va_arg(args, int);
+                    uint value = va_arg(args, uint);
                     print_integer(value, 10);
                     break;
                 }
                 case 'x': {
-                    int value = va_arg(args, int);
+                    uint value = va_arg(args, uint);
                     print_integer(value, 16);
                     break;
                 }

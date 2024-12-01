@@ -34,11 +34,30 @@ static task_t* pick_next_task()
     return queue_data(next, task_t, rq);
 }
 
+/* 保存当前页表基地址 */
+void save_cr3(task_t *task) {
+    __asm__ __volatile__("mov %%cr3, %0" : "=r"(task->cr3));
+}
+
+/* 加载新的页表 */
+void load_cr3(task_t *task) {
+    __asm__ __volatile__("mov %0, %%cr3" :: "r"(task->cr3));
+}
+
+void switch_mm(task_t *prev, task_t *next) {
+    if (prev != next) {
+        save_cr3(prev);
+    }
+
+    load_cr3(next);
+}
+
 void schedule()
 {
     task_t *next;
 
     next = pick_next_task();
+	switch_mm(current, next);
     switch_to(current, next);
 }
 
