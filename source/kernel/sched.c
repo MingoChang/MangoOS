@@ -8,7 +8,7 @@
 #include "../include/task.h"
 #include "../include/queue.h"
 
-extern task_t idle_task, init_task;
+extern task_t* idle_task;
 extern task_t* current;
 extern queue_t ready_task_queue;
 
@@ -28,7 +28,7 @@ static task_t* pick_next_task()
 
     /* 运行队列已经没有进程，执行空闲进程 */
     if (next == &ready_task_queue) {
-        next = &idle_task.rq;
+        next = &idle_task->rq;
     }
 
     return queue_data(next, task_t, rq);
@@ -106,4 +106,5 @@ void __switch_to(task_t *prev, task_t *next)
        :"=m"(prev->esp), "=m"(current)
        :"m"(next->esp), "m"(current)
        :"memory");
+    return;
 }

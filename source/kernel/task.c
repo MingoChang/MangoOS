@@ -9,27 +9,48 @@
 #include "../include/sched.h"
 #include "../include/queue.h"
 #include "../include/irq.h"
+#include "../include/error.h"
 #include "../include/page.h"
+#include "../include/memory.h"
+#include "../include/string.h"
 
 static int pid = 0;
 extern queue_t task_queue;
 extern queue_t ready_task_queue;
 extern queue_t sleep_task_queue;
 extern task_t *current;
+task_t *idle_task = NULL;
 
-int task_init(task_t* task, uint entry)
+/* 分配任务结构 */
+static task_t* alloc_task()
 {
+    /* 结构体和内核栈共4K */
+    task_t *task = (task_t*)kmalloc(4096);
+    return task;
+}
+
+/* 释放任务结构 */
+static void free_task(task_t *task)
+{
+    kfree((void*)task);
+}
+
+int task_init(const char *name, uint entry)
+{
+    task_t *task = alloc_task();
     if (task == NULL) {
-        return 1;
+        return -ENOMEM;
     }
 
     task->pid = pid++; 
+    kstrcpy(task->name, name);   
     /* 时间片初始化为1 */
     task->slice = TASK_SLICE;
 
-    uint *pesp = (uint*)&(task->stack[1023]);
+    uint *pesp = (uint*)((void*)task + 4096);
     if (pesp) {
         *(--pesp) = entry; /* __switch_to中的ret会返回到这个地址 */
+        *(--pesp) = 0;     /* 进程切换的时候__switch_to会自动插入%%ebx，所以还需一个空间来存放 */
         *(--pesp) = 0;
         *(--pesp) = (1 << 1) | (1 << 9);
         *(--pesp) = 0;
@@ -43,6 +64,11 @@ int task_init(task_t* task, uint entry)
     task->esp = (uint)pesp;
     task->cr3 = create_pde();
     task->state = TASK_RUNNING;
+
+    /* 空闲进程在调度的地方需要使用 */
+    if (entry == 0) {
+        idle_task = task;
+    }
 
     queue_insert_tail(&task_queue, &task->q);
     queue_insert_tail(&ready_task_queue, &task->rq);

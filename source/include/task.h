@@ -24,6 +24,7 @@ typedef struct _task_t
     }state;
 
     int pid;
+    char name[32];
     int slice;  /* 时间片 */
     uint cr3;   /* 进程页目录起始地址 */
     uint sleep_ticks; /* 睡眠时间 */
@@ -31,12 +32,10 @@ typedef struct _task_t
     uint esp;   /* 初始栈顶指针 */
     queue_t q;  /* 进程队列节点 */
     queue_t rq;  /* 运行进程队列节点 */
-
-    uint stack[1024]; /* 进程内核栈空间4K */
 }task_t;
 
 
-int task_init(task_t* task, uint entry);
+int task_init(const char *name, uint entry);
 void task_tick();
 void task_yield();
 void sys_sleep(uint ms);

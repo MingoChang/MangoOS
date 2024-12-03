@@ -11,5 +11,7 @@
 
 void kmemset(void *dest, uchar c, int size);
 void kmemcpy(void *dest, void *src, int size);
+void kstrcpy(char *dest, const char *src);
+int kstrlen(const char *str);
 
 #endif

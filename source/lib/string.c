@@ -50,7 +50,7 @@ int kmemcmp(void *first, void *second, int size)
     return 1;
 }
 
-void kstrcpy(char* dest, char* src)
+void kstrcpy(char* dest, const char* src)
 {
     if ((dest == NULL) || (src == NULL)) {
         return;

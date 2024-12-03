@@ -17,14 +17,13 @@ queue_t task_queue;
 queue_t ready_task_queue;
 queue_t sleep_task_queue;
 
-task_t idle_task, init_task;
 task_t* current;
 
 void init_task_entry()
 {
     int count = 0;
     while(1) {
-        kprintf("in first task thread: %d\n", count++);
+        kprintf("in %s thread: %d\n", current->name, count++);
         sys_sleep(1000);
     }
 }
@@ -42,8 +41,8 @@ void kernel_init(void)
     queue_init(&sleep_task_queue);
 
     /* 就是本进程，在切换出去的时候设置 entry。这边先设置为0 */
-    task_init(&idle_task, 0);
-    task_init(&init_task, (uint)init_task_entry);
+    task_init("idle task", 0);
+    task_init("init task", (uint)init_task_entry);
 
     current = queue_data(queue_first(&ready_task_queue), task_t, rq);
 
