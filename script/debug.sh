@@ -4,7 +4,7 @@ location=$(dirname "$0")
 qemu-system-i386 \
     -daemonize -m 256M \
     -s -S \
-    -drive file=$location/../image/system.img,index=0,media=disk,format=raw \
+    -drive file=$location/../image/system.img,index=0,media=disk,format=raw,if=ide \
     -d pcall,page,mmu,cpu_reset,guest_errors,page,trace:ps2_keyboard_set_translation
 
 # 给 QEMU 500 毫秒时间启动
