@@ -18,6 +18,10 @@ _start:
 
 	mov $0x8000, %sp # 设置栈顶
 
+	/* 分区后的起始扇区 */
+	mov 0x7dc6, %eax
+	mov %eax, part_start
+
 	lea loader, %si	# 取字符串地址
 	call puts
 
@@ -488,6 +492,7 @@ read_blocks:
 read_disk:
 	pusha
 
+	add part_start, %ebx
 read:
 	call read_sec
 	add $512, %edi
@@ -581,8 +586,8 @@ gdt_descriptor:
 
 .equ KernelEntryPoint, 0x30400	# 内核入口点位置
 
-    position:	.word 160	# 从第二行开始显示
-    loader:		.string "Begin loader"
+    position:	.word 0	# 从第二行开始显示
+    loader:		.string "Welcome to Mango system"
     pro_mode:   .string "In Protected mode"
 	block_size:	.word 0		# 块大小
 	inode_size:	.word 0		# inode大小
@@ -592,3 +597,4 @@ gdt_descriptor:
 	file_name:	.asciz "kernel"
 	mem_sum:	.word 0		# 内存分块数
 	mem_size:	.long 0		# 内存大小
+	part_start:	.long 0 # 分区后的起始扇区

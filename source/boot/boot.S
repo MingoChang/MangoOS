@@ -20,8 +20,12 @@ _start:
     mov %cs, %ax
     mov %ax, %ds
 
-    lea welcome, %si
-    call puts
+	/* 取分区起始扇区低8位 */
+	mov 0x7dc6, %eax
+	mov %ax, part_start
+	/* 取分区起始扇区高16位 */
+	shr $16, %eax
+	mov %ax, params + 10
 
 	call loader
 
@@ -33,7 +37,7 @@ loader:
     pusha
 
     mov $0x8000, %si    # 读超级块内容到内存0x8000处
-    mov $0x0002, %ax    # 从磁盘偏移1024处读Ext2超级块内容
+    mov $0x0002, %ax    # 从磁盘偏移1024处读Ext2超级块内容，后面磁盘驱动那边对磁盘进行了分区，从第2048扇区开始
     mov $0, %di         # 从磁盘偏移1024处读Ext2超级块内容
     mov $0x0001, %cx    # 读1个扇区
     call read_disk
@@ -198,11 +202,11 @@ read_blocks:
 read_disk:
     pusha
 
+	add part_start, %ax
 read:
     mov %es, params + 6     # 读到内存的位置段地址
     mov %si, params + 4     # 读取到段内偏移地址
     mov %ax, params + 8     # 开始读的扇区
-    mov %di, params + 10    # 开始读的扇区高16位
 
     call read_sec
 
@@ -259,8 +263,7 @@ putc:
     popa
     ret
 
-    welcome:		.string "Welcome to Mango system\n"
-	file_not_found: .string "error:file not found!\n"
+	file_not_found: .string "File not found\n"
 	dir_name:		.asciz "boot"
 	file_name:		.asciz "loader"
 
@@ -269,7 +272,7 @@ putc:
 	sector_num:	.word 0		# 每个块的扇区数
 	inode_block:.word 0		# inode表的起始扇区
 
-	loader_start: .word 0x8000	# loader程序内存地址
+	part_start: .word 0x0000	# 分区开始扇区号
 
 	params:                                     
 		.word 0x0010        # 参数表大小为16字节

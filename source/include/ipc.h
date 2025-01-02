@@ -11,6 +11,8 @@
 #include "queue.h"
 #include "task.h"
 
+struct _task_t;
+
 typedef struct _sem_t
 {
     int count;
@@ -20,7 +22,7 @@ typedef struct _sem_t
 typedef struct _mutex_t
 {
     int lock_times;
-    task_t *owner;
+    struct _task_t *owner;
     queue_t mutex_queue;
 }mutex_t;
 

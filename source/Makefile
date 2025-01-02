@@ -1,8 +1,9 @@
 TARGETS = boot.bin loader kernel.elf
 OBJECTS = boot/boot.o boot/loader.o
 KERNEL_OBJS = kernel/start.o kernel/init.o kernel/arch.o kernel/irq.o kernel/time.o kernel/task.o \
-			  kernel/sched.o kernel/ipc.o mm/bitmap.o mm/page.o mm/memory.o
-LIB_OBJS = lib/log.o lib/string.o lib/queue.o
+			  kernel/sched.o kernel/ipc.o mm/bitmap.o mm/page.o mm/memory.o device/disk.o device/dev.o \
+			  fs/fs.o fs/file.o fs/ext2.o fs/buffer.o
+LIB_OBJS = lib/log.o lib/string.o lib/queue.o lib/list.o
 ELFS = boot.elf loader.elf
 BOOT_SRC = boot
 KERNEL_SRC = kernel
@@ -41,13 +42,17 @@ loader: loader.elf
 
 install: $(TARGETS)
 	@echo "写入程序到磁盘文件 $(DISK_NAME)..."
-	@dd if=boot.bin of=$(DISK_NAME) bs=512 count=1 conv=notrunc
+	@dd if=boot.bin of=$(DISK_NAME) bs=446 count=1 conv=notrunc
 	@sync
-	@sudo mount -t ext2 $(DISK_NAME) $(MOUNT_DIR)
+	@sudo losetup -P /dev/loop2 $(DISK_NAME)
+	@sudo mount /dev/loop2p1 $(MOUNT_DIR)
+	@sudo rm -f $(MOUNT_DIR)/boot/kernel $(MOUNT_DIR)/boot/loader
 	@sudo cp loader $(MOUNT_DIR)/boot/
 	@sudo cp kernel.elf $(MOUNT_DIR)/boot/kernel
 	@sync
+	@echo "拷贝文件完成..."
 	@sudo umount $(MOUNT_DIR)
+	@sudo losetup -d /dev/loop2
 
 clean:
 	rm -rf $(OBJECTS) $(KERNEL_OBJS) $(LIB_OBJS) $(TARGETS) $(ELFS)

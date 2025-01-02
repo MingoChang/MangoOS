@@ -25,6 +25,8 @@ typedef struct _mem_block_t
 
 #pragma pack()
 
+#define MEM_HSIZE sizeof(mem_block_t)
+
 void mem_init();
 void* kmalloc(uint size);
 void kfree(void* address);

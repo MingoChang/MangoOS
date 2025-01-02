@@ -10,8 +10,16 @@
 #include "type.h"
 #include "irq.h"
 
+typedef struct _time_t
+{
+    int tm_sec;
+    int tm_min;
+    int tm_hour;
+    int tm_day;
+    int tm_mon;
+    int tm_year;
+}time_t;
+
 void time_init();
-void exception_handler_time();
-void do_handler_time(exception_frame_t* frame);
 
 #endif

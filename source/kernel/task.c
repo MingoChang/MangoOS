@@ -13,6 +13,7 @@
 #include "../include/page.h"
 #include "../include/memory.h"
 #include "../include/string.h"
+#include "../include/file.h"
 
 static int pid = 0;
 extern queue_t task_queue;
@@ -25,7 +26,7 @@ task_t *idle_task = NULL;
 static task_t* alloc_task()
 {
     /* 结构体和内核栈共4K */
-    task_t *task = (task_t*)kmalloc(4096);
+    task_t *task = (task_t*)kmalloc(8192);
     return task;
 }
 
@@ -33,6 +34,27 @@ static task_t* alloc_task()
 static void free_task(task_t *task)
 {
     kfree((void*)task);
+}
+
+int task_alloc_fd(file_t *file)
+{
+    task_t *task = current;
+    for (int i=0; i<TASK_OPEN_MAX_FILES; i++) {
+        if (task->open_file_table[i] == NULL) {
+            task->open_file_table[i] = file;
+            return i;
+        }
+    }
+
+    return -1;
+}
+
+void task_free_fd(int fd)
+{
+    task_t *task = current;
+    if (fd >= 0 && fd < TASK_OPEN_MAX_FILES) {
+        task->open_file_table[fd] = NULL;
+    }
 }
 
 int task_init(const char *name, uint entry)
@@ -47,7 +69,7 @@ int task_init(const char *name, uint entry)
     /* 时间片初始化为1 */
     task->slice = TASK_SLICE;
 
-    uint *pesp = (uint*)((void*)task + 4096);
+    uint *pesp = (uint*)((void*)task + 8192);
     if (pesp) {
         *(--pesp) = entry; /* __switch_to中的ret会返回到这个地址 */
         *(--pesp) = 0;     /* 进程切换的时候__switch_to会自动插入%%ebx，所以还需一个空间来存放 */
@@ -98,6 +120,7 @@ static void task_wakeup(task_t *task)
     uint eflags = enter_critical();
     queue_remove(&task->rq);
     queue_insert_tail(&ready_task_queue, &task->rq);
+    task->state = TASK_RUNNING;
     leave_critical(eflags);
 }
 

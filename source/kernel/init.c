@@ -12,6 +12,9 @@
 #include "../include/sched.h"
 #include "../include/queue.h"
 #include "../include/memory.h"
+#include "../include/fs.h"
+#include "../include/dev.h"
+#include "../include/string.h"
 
 queue_t task_queue;
 queue_t ready_task_queue;
@@ -22,6 +25,21 @@ task_t* current;
 void init_task_entry()
 {
     int count = 0;
+
+    char data[51];
+
+    int fd = sys_open("/boot/example", O_RDONLY);
+    if (fd < 0) {
+        __asm__ __volatile__("hlt");
+    }
+
+    int err = sys_read(fd, data, 50);
+    if (err < 0) {
+        kprintf("read file err!:%d\n", err);
+    }
+
+    sys_close(fd);
+
     while(1) {
         kprintf("in %s thread: %d\n", current->name, count++);
         sys_sleep(1000);
@@ -34,6 +52,7 @@ void kernel_init(void)
     time_init();
     log_init();
     mem_init();
+    fs_init();
 
     /* 初始化进程队列和可运行队列 */
     queue_init(&task_queue);

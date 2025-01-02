@@ -16,7 +16,7 @@ void log_init()
 {
     mutex_init(&mutex);
     /* 0x5a0为进入内核后屏幕字符的位置 */
-    vga = (ushort*)(0xB8000 + 0x5a0);
+    vga = (ushort*)(0xB8000 + 0x500);
 }
 
 static void print_integer(uint value, int base) {

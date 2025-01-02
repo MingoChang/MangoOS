@@ -18,7 +18,7 @@ void kmemset(void *dest, uchar c, int size)
     }
 }
 
-void kmemcpy(void *dest, void *src, int size)
+void kmemcpy(void *dest, const void *src, int size)
 {
     if ((dest == NULL) || (src == NULL) || size <= 0) {
         return;
@@ -32,7 +32,7 @@ void kmemcpy(void *dest, void *src, int size)
     }
 }
 
-int kmemcmp(void *first, void *second, int size)
+int kmemcmp(const void *first, const void *second, int size)
 {
     if ((first == NULL) || (second == NULL)) {
         return 0;
@@ -47,7 +47,7 @@ int kmemcmp(void *first, void *second, int size)
         }
     }
 
-    return 1;
+    return 0;
 }
 
 void kstrcpy(char* dest, const char* src)

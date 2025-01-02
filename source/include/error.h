@@ -16,5 +16,12 @@
 #define EACCES  7   /* 没有权限 */
 #define EFAULT  8   /* 无效的地址 */
 #define ENOMEM  9   /* 内存耗尽 */
+#define ENODEV  10  /* 无设备 */
+#define ENODISK 11  /* 磁盘异常 */
+#define ENOPART 12  /* 磁盘异常 */
+#define ETMFILES 13 /* 打开文件数太多 */
+#define EINVAL 14   /* 不合法的值 */
+#define EMAXSIZE 15 /* 超过规定大小 */
+#define ENOTEXIST 16    /* 不存在 */
 
 #endif
