@@ -5,7 +5,7 @@ qemu-system-i386 \
     -daemonize -m 256M \
     -s -S \
     -drive file=$location/../image/system.img,index=0,media=disk,format=raw,if=ide \
-    -d pcall,page,mmu,cpu_reset,guest_errors,page,trace:ps2_keyboard_set_translation
+    -d in_asm,pcall,page,mmu,cpu_reset,guest_errors,page,trace:ps2_keyboard_set_translation
 
 # 给 QEMU 500 毫秒时间启动
 sleep 0.5
@@ -15,6 +15,7 @@ gdb $location/../source/boot.elf \
     -ex "set confirm off" \
     -ex "add-symbol-file $location/../source/loader.elf 0x8000" \
     -ex "add-symbol-file $location/../source/kernel.elf 0x30400" \
+    -ex "add-symbol-file $location/../source/init.elf 0x40803400" \
     -ex "target remote :1234" \
     -ex "b _start" \
     -ex "continue"
