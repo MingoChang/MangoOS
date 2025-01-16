@@ -7,6 +7,8 @@
 #include "../include/sched.h"
 #include "../include/task.h"
 #include "../include/queue.h"
+#include "../include/irq.h"
+#include "../include/log.h"
 
 extern task_t* idle_task;
 extern task_t* current;
@@ -14,6 +16,7 @@ extern queue_t ready_task_queue;
 
 static task_t* pick_next_task()
 {
+    uint eflags = enter_critical();
     queue_t *next = current->rq.next;
 
     /* 当前任务已经不在运行队列，next是取不到下一个可运行进程的 */
@@ -30,6 +33,7 @@ static task_t* pick_next_task()
     if (next == &ready_task_queue) {
         next = &idle_task->rq;
     }
+    leave_critical(eflags);
 
     return queue_data(next, task_t, rq);
 }
@@ -44,12 +48,26 @@ void load_cr3(task_t *task) {
     __asm__ __volatile__("mov %0, %%cr3" :: "r"(task->cr3));
 }
 
+void load_tr(int selector)
+{
+   __asm__ __volatile__("ltr %0" :: "r"(selector));
+}
+
 void switch_mm(task_t *prev, task_t *next) {
     if (prev != next) {
         save_cr3(prev);
+        load_cr3(next);
     }
+}
 
-    load_cr3(next);
+void switch_tss(task_t *prev, task_t *next)
+{
+    if (prev != next) {
+        /* 保存当前进程的TSS */
+        set_tss_desc(&next->tss, TSS_SELECTOR >> 3);
+
+        load_tr(TSS_SELECTOR);
+    }
 }
 
 void schedule()
@@ -57,6 +75,7 @@ void schedule()
     task_t *next;
 
     next = pick_next_task();
+    switch_tss(current, next);
 	switch_mm(current, next);
     switch_to(current, next);
 }

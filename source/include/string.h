@@ -14,5 +14,6 @@ void kmemcpy(void *dest, const void *src, int size);
 int kmemcmp(const void *first, const void *second, int size);
 void kstrcpy(char *dest, const char *src);
 int kstrlen(const char *str);
+char *kstrrchr(const char *str, int c);
 
 #endif

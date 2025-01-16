@@ -9,9 +9,12 @@
 
 #include "type.h"
 #include "fs.h"
+#include "string.h"
 
 #define MAX_OPEN_FILES 2048
 #define MAX_NAME_LEN 64
+
+#define GET_FILENAME(path) (kstrrchr(path, '/') ? kstrrchr(path, '/') + 1 : path)
 
 struct _fs_t;
 typedef struct _file_t

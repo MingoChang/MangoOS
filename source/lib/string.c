@@ -74,3 +74,25 @@ int kstrlen(const char* str)
 
     return len;
 }
+
+char *kstrrchr(const char *str, int c)
+{
+    char *last_occurrence = NULL;
+
+    /* 遍历字符串直到结束 */
+    while (*str) {
+        if (*str == (char)c) {
+			/* 更新最后一次出现的指针 */
+            last_occurrence = (char *)str; 
+        }
+        str++;
+    }
+
+    /* 检查末尾的 null 字符是否匹配 */
+    if (c == '\0') {
+        return (char *)str;
+    }
+
+    return last_occurrence;
+}
+

@@ -20,6 +20,7 @@
     __asm__ __volatile__("movl %%cr3, %%eax\n\tmovl %%eax, %%cr3" : : : "ax")
 
 #define USER_MEMORY_BEGIN 0x40000000
+#define USER_STACK_SIZE (500 * 4096)
 
 #define PAGE_PRESENT    1 << 0
 #define PAGE_RW         1 << 1
@@ -118,7 +119,9 @@ uint alloc_pages(int count);
 void free_pages(uint addr, int count);
 uint create_pde();
 void destroy_pde(uint page_dir);
-uint alloc_vpages(int dindex, int index, int count);
-void free_vpages(int dindex, int index, int count);
+uint alloc_vpages(page_dir_t* pde, uint addr, uint size);
+void free_vpages(page_dir_t* pde, uint addr, uint size);
+int copy_from_user(void* to, const void* from, uint size);
+int copy_to_user(void* to, const void* from, uint size);
 
 #endif

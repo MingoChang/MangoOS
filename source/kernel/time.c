@@ -8,6 +8,7 @@
 #include "../include/arch.h"
 #include "../include/irq.h"
 #include "../include/task.h"
+#include "../include/log.h"
 
 /* 系统滴答 */
 uint sys_tick;
@@ -19,6 +20,7 @@ uint timestamp;
 #define YEAR (365 * DAY)
 
 extern void exception_handler_time();
+extern task_t* current;
 
 static int month[12] = {
     0,
@@ -127,8 +129,8 @@ void do_handler_time(exception_frame_t* frame)
 {
     sys_tick++;
     pic_done(0x20);
+    
     task_tick();
-
     update_timestamp();
 }
 

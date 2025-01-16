@@ -207,6 +207,7 @@ read:
     mov %es, params + 6     # 读到内存的位置段地址
     mov %si, params + 4     # 读取到段内偏移地址
     mov %ax, params + 8     # 开始读的扇区
+	mov %di, params + 10    # 开始读的扇区高16位
 
     call read_sec
 
@@ -263,7 +264,7 @@ putc:
     popa
     ret
 
-	file_not_found: .string "File not found\n"
+	file_not_found: .string "No File\n"
 	dir_name:		.asciz "boot"
 	file_name:		.asciz "loader"
 

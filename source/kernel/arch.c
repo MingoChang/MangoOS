@@ -9,8 +9,9 @@
 
 static gdt_desc_t gdt_table[GDT_TABLE_SIZE];
 static gate_desc_t idt_table[IDT_TABLE_SIZE];
+tss_t TSS;
 
-void set_gdt_desc(ushort index, uint base, uint limit, ushort attribute)
+void set_gdt_desc(int index, uint base, uint limit, ushort attribute)
 {
     gdt_desc_t* desc = gdt_table + index; /* 找到索引对应的GDT项 */
 
@@ -49,10 +50,27 @@ static void init_gdt()
           (1 << 4) | 0x0A | (1 << 14 ));
     /* 数据段, 可写，可读，段存在，特权级0 */
     set_gdt_desc(KERNEL_SELECTOR_DS >> 3, 0x0, 0xffffffff, (1 << 7) | (0 << 5) |
-            (1 << 4) | 0x2 | (1 << 14));
+          (1 << 4) | 0x2 | (1 << 14));
+
+    /* 用户代码段, 可执行，可读，段存在，特权级3 */ 
+    set_gdt_desc(USER_SELECTOR_CS >> 3, 0x0, 0xffffffff, (1 << 7) | (1 << 5) | 
+          (1 << 4) | 0x0A | (3 << 5) | (1 << 14));                             
+    
+    /* 用户数据段, 可写，可读，段存在，特权级3 */
+    set_gdt_desc(USER_SELECTOR_DS >> 3, 0x0, 0xffffffff, (1 << 7) | (1 << 5) | 
+          (1 << 4) | 0x2 | (3 << 5) | (1 << 14)); 
+
+    /* TSS段, 可读，段存在，特权级0 */
+    set_gdt_desc(TSS_SELECTOR >> 3, (uint)&TSS, sizeof(tss_t), (1 << 7) | (0 << 5) |
+          (9 << 0));
 
     load_gdt((uint)gdt_table, sizeof(gdt_table));
     reload_segments();
+}
+
+void set_tss_desc(tss_t *tss, int index)
+{
+    set_gdt_desc(index, (uint)tss, sizeof(tss_t), (1 << 7) | (0 << 5) | (9 << 0));
 }
 
 static void init_8259()

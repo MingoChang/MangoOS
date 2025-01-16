@@ -26,19 +26,7 @@ void init_task_entry()
 {
     int count = 0;
 
-    char data[51];
-
-    int fd = sys_open("/boot/example", O_RDONLY);
-    if (fd < 0) {
-        __asm__ __volatile__("hlt");
-    }
-
-    int err = sys_read(fd, data, 50);
-    if (err < 0) {
-        kprintf("read file err!:%d\n", err);
-    }
-
-    sys_close(fd);
+    sys_execve("/boot/init", NULL, NULL);
 
     while(1) {
         kprintf("in %s thread: %d\n", current->name, count++);
@@ -63,13 +51,16 @@ void kernel_init(void)
     task_init("idle task", 0);
     task_init("init task", (uint)init_task_entry);
 
+
     current = queue_data(queue_first(&ready_task_queue), task_t, rq);
 
     /* 开中断 */
     sti();
 
+    volatile uint a = 0;
     /* 作为空闲进程 */
     while(1) {
+        a++;
         __asm__ __volatile__("hlt");
     }
 }

@@ -39,6 +39,17 @@ typedef struct _IDTR
     uint base; 
 }IDTR;
 
+typedef struct _tss_t
+{
+    uint pre_link;
+    uint esp0, ss0, esp1, ss1, esp2, ss2;
+    uint cr3;
+    uint eip, eflags, eax, ecx, edx, ebx, esp, ebp, esi, edi;
+    uint es, cs, ss, ds, fs, gs;
+    uint ldt;
+    uint iomap;
+}tss_t;
+
 #pragma pack() /* 结构体恢复默认对其方式 */
 
 void arch_init();
@@ -132,7 +143,8 @@ static inline void reload_segments()
     );
 }
 
-void set_gdt_desc(ushort index, uint base, uint limit, ushort attribute);
+void set_gdt_desc(int index, uint base, uint limit, ushort attribute);
 void set_gate_desc(ushort index, ushort selector, uint offset, ushort attribute);
+void set_tss_desc(tss_t *tss, int index);
 
 #endif

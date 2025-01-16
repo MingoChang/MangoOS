@@ -44,9 +44,12 @@ void free_pages(uint addr, int count)
 }
 
 /* 分配多页虚拟内存页并映射物理内存 */
-uint alloc_vpages(int dindex, int index, int count)
+uint alloc_vpages(page_dir_t* pde, uint addr, uint size)
 {
-    page_dir_t *pde = (page_dir_t*)current->cr3;
+    int dindex = pde_index(addr);
+    int index = pte_index(addr);
+    int count = (size + PAGE_SIZE - 1) / PAGE_SIZE;
+
     uint page = pde[dindex].value;
     if (!page) {
         page = alloc_pages(1);
@@ -59,6 +62,10 @@ uint alloc_vpages(int dindex, int index, int count)
 
     page = align_down(page, PAGE_SIZE);
     page_table_t *pte = (page_table_t*)page + index;
+    
+    if (pte->present & !pte->dirty) {
+        return 0;
+    }
 
     do {
         uint pg = alloc_pages(1);
@@ -68,16 +75,19 @@ uint alloc_vpages(int dindex, int index, int count)
         
         pte->value = pg | PAGE_SHARED;
         pte++;
-    } while (count--);
+    } while (--count);
 
     invalidate();
     return 0;
 }
 
 /* 释放多页虚拟内存页 */
-void free_vpages(int dindex, int index, int count)
+void free_vpages(page_dir_t* pde, uint addr, uint size)
 {
-    page_dir_t *pde = (page_dir_t*)current->cr3;
+    int dindex = pde_index(addr);
+    int index = pte_index(addr);
+    int count = (size + PAGE_SIZE - 1) / PAGE_SIZE;
+
     uint page = pde[dindex].value;
     if (!(page & PAGE_PRESENT)) {
         return;
@@ -121,8 +131,12 @@ uint create_pde()
     /* loader中映射物理内存都映射到内核的地址空间中
      * 用户空间的映射到进程加载的时候再做映射 */
 	uint user_start_index = pde_index(USER_MEMORY_BEGIN);
-    for (int i=0; i<user_start_index; i++) {
-        pde[i].value = kernel_pde[i].value;
+    for (int i=0; i<PAGE_SIZE/4; i++) {
+        if (i < user_start_index) {
+            pde[i].value = kernel_pde[i].value;
+        } else {
+            pde[i].value = 0;
+        }
     }
 
     return (uint)pde;
@@ -132,7 +146,7 @@ uint create_pde()
 void destroy_pde(uint page_dir)
 {
     uint user_start_index = pde_index(USER_MEMORY_BEGIN);
-    page_dir_t *pde = (page_dir_t*)page_dir + user_start_index;
+    page_dir_t *pde = (page_dir_t*)page_dir;
 
     for (int i=user_start_index; i<1024; i++) {
         if (!pde[i].present) {
@@ -152,5 +166,7 @@ void destroy_pde(uint page_dir)
         free_pages(align_down(pde[i].value, PAGE_SIZE), 1);
         pde[i].value = 0;
     }
+
+    free_pages(page_dir, 1);
 }
 
