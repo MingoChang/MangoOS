@@ -125,7 +125,7 @@ static void update_timestamp()
     }
 }
 
-void do_handler_time(exception_frame_t* frame)
+void do_handler_time(exception_frame_t *frame)
 {
     sys_tick++;
     pic_done(0x20);

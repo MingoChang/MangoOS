@@ -939,6 +939,8 @@ int ext2_seek(file_t *file, uint offset)
 {
     if (offset >= 0) {
         file->pos = offset;
+        super_block_t *block = (super_block_t*)file->fs->data;
+        file->cur_block = file->pos / block->block_size;
     }
 
     return 0;

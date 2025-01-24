@@ -26,10 +26,10 @@ extern task_t *current;
 task_t *idle_task = NULL;
 
 /* 分配任务结构 */
-static task_t* alloc_task()
+task_t* alloc_task()
 {
     /* 结构体和内核栈共4K */
-    task_t *task = (task_t*)kmalloc(4 * PAGE_SIZE);
+    task_t *task = (task_t*)kmalloc(2 * PAGE_SIZE);
     return task;
 }
 
@@ -60,13 +60,8 @@ void task_free_fd(int fd)
     }
 }
 
-int task_init(const char *name, uint entry)
+int task_init(task_t *task, const char *name, uint entry)
 {
-    task_t *task = alloc_task();
-    if (task == NULL) {
-        return -ENOMEM;
-    }
-
     task->pid = pid++; 
     kstrcpy(task->name, name);   
     /* 时间片初始化为1 */
@@ -88,7 +83,7 @@ int task_init(const char *name, uint entry)
     }
     task->esp = (uint)pesp;
     task->cr3 = create_pde();
-    task->state = TASK_RUNNING;
+    task->state = TASK_CREATED;
 
     task->tss.esp0 = (uint)pesp;
     task->tss.ss0 = KERNEL_SELECTOR_DS;
@@ -424,6 +419,7 @@ void switch_to_user_mode(uint entry, uint stack_top)
             "mov %0, %%es\n\t"
             "mov %0, %%fs\n\t"
             "mov %0, %%gs\n\t"
+            "mov $0, %%eax\n\t"
             
             /* 压栈：返回地址、CS、EFLAGS、ESP、SS */
             "push %2\n\t"
@@ -442,6 +438,137 @@ void switch_to_user_mode(uint entry, uint stack_top)
     /* 不会执行到这里 */
     return;
 }
+
+static void copy_open_files(task_t *child)
+{
+    task_t *parent = current;
+
+    for (int i=0; i<TASK_OPEN_MAX_FILES; i++) {
+        file_t *file = parent->open_file_table[i];
+        if (file) {
+            file_inc_ref(file);
+            child->open_file_table[i] = parent->open_file_table[i];
+        }
+    }
+}
+
+static void distory_memory(page_dir_t *pde)
+{
+    int index = pde_index(USER_MEMORY_BEGIN);
+    for (int i=index; i<PAGE_SIZE/4; i++) {
+        if (!pde[i].present) {
+            continue;
+        }
+
+        page_table_t *pte = (page_table_t*)pde[i].value;
+        for (int j=0; i<PAGE_SIZE/4; i++) {
+            if (!pte[i].present) {
+                continue;
+            }
+
+            if (pte[i].value != 0) {
+                free_pages(pte[i].value, 1);
+            }
+        }
+    }
+
+}
+
+static int copy_memory(page_dir_t *pde)
+{
+    /* 父进程的页表目录地址 */
+    page_dir_t *ppde = (page_dir_t*)current->cr3;
+
+    int index = pde_index(USER_MEMORY_BEGIN);
+    for (int i=index; i<PAGE_SIZE/4; i++) {
+        if (!ppde[i].present) {
+            continue;
+        }
+
+        uint page = alloc_pages(1);
+        if (!page) {
+            distory_memory(pde);
+            return -1;
+        }
+
+        pde[i].value = page | PAGE_SHARED;
+
+        page_table_t *ppte = (page_table_t*)align_down(ppde[i].value, PAGE_SIZE);
+        page_table_t *pte = (page_table_t*)page;
+        for (int j=0; j<PAGE_SIZE/4; j++) {
+            if (!ppte[j].present) {
+                continue;
+            }
+
+            uint pg = alloc_pages(1);
+            if (!pg) {
+                distory_memory(pde);
+                return -1;
+            }
+
+            pte[j].value = pg | PAGE_SHARED;
+
+            /* 拷贝数据 */
+            kmemcpy((void*)pg, (const void*)align_down(ppte[j].value, PAGE_SIZE), PAGE_SIZE);
+        }
+    }
+
+    return 0;
+}
+
+static int do_fork()
+{
+    uint eip = 0;
+    uint esp = 0;
+    uint entry= 0;
+
+    /* 取用户空间进入中断指令的后一条指定地址和用户栈指针，以及调用本函数后的内核空间地址 */
+    __asm__ __volatile__(
+            "mov 44(%%esp), %0\n\t"
+            "mov 188(%%esp), %1\n\t"
+            "mov 200(%%esp), %2\n\t"
+            :"=r"(eip), "=r"(entry), "=r"(esp)
+    );
+
+    task_t *parent = current;
+
+    /* 申请一个新的进程结构体 */
+    task_t *child = alloc_task();
+    if (child < 0) {
+        return -1;
+    }
+
+    task_init(child, parent->name, eip);
+    child->tss.eip = entry;
+    child->tss.esp = esp;
+
+    copy_open_files(child);
+    child->parent = parent;
+
+    /* 拷贝内存空间内容，这边没有实现写时复制，因为我们的功能能实现就OK，主要是了解内核原理 */
+    int err = copy_memory((page_dir_t *)child->cr3);
+    if (err < 0) {
+        /* 设置为ZOMBIE状态，空闲进程回收 */
+        child->state = TASK_ZOMBIE;
+        return -1;
+    }
+
+    child->state = TASK_RUNNING;
+    return child->pid;
+}
+
+int sys_fork()
+{
+    int pid = do_fork();
+
+    /* 子进程，返回用户空间 */
+    if (pid == 0) {
+        switch_to_user_mode(current->tss.eip, current->tss.esp);
+    }
+
+    return pid;
+}
+
 
 /* 从文件中加载进程 */
 int sys_execve(char *name, char **argv, char **env)
@@ -484,9 +611,9 @@ int sys_execve(char *name, char **argv, char **env)
     task->cr3 = n_page_dir;
     write_cr3(n_page_dir);
 
-    switch_to_user_mode(entry, stack_top);
+    current->tss.eip =entry;
+    current->tss.esp = stack_top;
 
-    /* 不会运行到这里 */
     return 0;
 }
 

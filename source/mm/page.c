@@ -148,13 +148,13 @@ void destroy_pde(uint page_dir)
     uint user_start_index = pde_index(USER_MEMORY_BEGIN);
     page_dir_t *pde = (page_dir_t*)page_dir;
 
-    for (int i=user_start_index; i<1024; i++) {
+    for (int i=user_start_index; i<PAGE_SIZE/4; i++) {
         if (!pde[i].present) {
             continue;
         }
         
         page_table_t *pte = (page_table_t*)(align_down(pde[i].value, PAGE_SIZE));
-        for (int j=0; j<1024; j++) {
+        for (int j=0; j<PAGE_SIZE/4; j++) {
             if (!pte[j].present) {
                 continue;
             }

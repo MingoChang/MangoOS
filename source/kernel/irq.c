@@ -103,7 +103,12 @@ int irq_install(int irq_num, irq_handler_t handler)
         return -1;
     }
     
-    set_gate_desc(irq_num, KERNEL_SELECTOR_CS, (uint)handler, (1 << 15) | (0 << 13) | (0xE << 8));
+    /* 系统调用中断从用户空间触发，DPL为3，低特权级 */
+    if (irq_num == 0x80) {
+        set_gate_desc(irq_num, KERNEL_SELECTOR_CS, (uint)handler, (1 << 15) | (3 << 13) | (0xE << 8));
+    } else {
+        set_gate_desc(irq_num, KERNEL_SELECTOR_CS, (uint)handler, (1 << 15) | (0 << 13) | (0xE << 8));
+    }
 
     return 0;
 }

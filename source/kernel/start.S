@@ -66,3 +66,4 @@ exception_handler control 21 1
 
 exception_handler time 0x20 0
 exception_handler ide 0x2E 0
+exception_handler syscall 0x80 0
